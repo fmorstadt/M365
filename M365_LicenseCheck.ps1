@@ -1,4 +1,22 @@
-﻿[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+﻿<# 
+ .Synopsis
+  M365 license overview and assignment
+  
+ .Description
+  Connects to MSOnline and checks license stat and assignments
+  Export to CSV
+
+ .PARAMETER
+  
+ .NOTES
+  (c) 2020 ByteRunner/Frank Morstadt
+   
+  VERSION:
+  17.09.2020 V1.0 Basis-Version (getestet und freigegeben)
+#>
+
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+$bolAdmMfa = $false # Azure Admin account needs MFA for authentication?
 
 #region MyInvocation
 if ($hostinvocation -ne $null)
@@ -15,17 +33,23 @@ Set-PSRepository -Name "PSGallery" -InstallationPolicy Trusted
 if (!(Get-Module -ListAvailable -Name "MSOnline")) { Install-Module -Name MSOnline -Scope AllUsers }
 try { Import-Module -Name MSOnline } catch { Throw }
 
-if (!($objMsoCre)) { $objMsoCre = Get-Credential }
+if ($bolAdmMfa) {
+    Connect-MsolService
+}
+else {
+    if (!($objMsoCre)) { $objMsoCre = Get-Credential }
+    Connect-MsolService -Credential $objMsoCre
+}
 
-try {Connect-MsolService -Credential $objMsoCre} catch {throw;break}
+try { Connect-MsolService -Credential $objMsoCre } catch { throw; break }
 
 $licensePlanList = Get-MsolAccountSku
 $objUsr = $null
 $objUsrLst = Get-MsolUser -All | Where-Object { $_.islicensed }
 $objResult = @()
-$strUsrCsv = $strps1dir+"\"+$strps1nam+".csv"
-$strLicCsv = $strps1dir+"\"+$strps1nam+"_Count.csv"
-$strLicUsr = $strps1dir+"\"+$strps1nam+"_User.csv"
+$strUsrCsv = $strps1dir + "\" + $strps1nam + ".csv"
+$strLicCsv = $strps1dir + "\" + $strps1nam + "_Count.csv"
+$strLicUsr = $strps1dir + "\" + $strps1nam + "_User.csv"
 
 foreach ($objUsr in $objUsrLst) {
 
